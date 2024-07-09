@@ -1,1 +1,1 @@
-# mongodb-generic-repository
+# MongoDB generic repository in Rust
