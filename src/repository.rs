@@ -10,7 +10,7 @@ use crate::entities::DbEntity;
 use crate::errors::{err, MyError};
 
 pub struct MongoDB {
-    db: Database
+    pub db: Database
 }
 
 impl MongoDB {

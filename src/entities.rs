@@ -5,6 +5,7 @@ pub trait DbEntity: DeserializeOwned + Sync + Send + Unpin {
     fn collection_name() -> String;
 }
 
+
 impl DbEntity for User {
     fn collection_name() -> String {
         String::from("Users")
@@ -18,6 +19,13 @@ pub struct User {
     pub username: String,
     pub age: u32,
     pub is_male: bool
+}
+
+
+impl DbEntity for Note {
+    fn collection_name() -> String {
+        String::from("Notes")
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]

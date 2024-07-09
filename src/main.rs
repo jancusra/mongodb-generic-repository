@@ -1,29 +1,20 @@
-mod entities;
-mod errors;
-mod repository;
+pub mod entities;
+pub mod errors;
+pub mod repository;
+pub mod tests;
 
-use entities::User;
-use mongodb::bson::oid::ObjectId;
-use repository::MongoDB;
+use mongodb::bson::doc;
 use std::error::Error;
-use std::str::FromStr;
 use tokio;
 
+use repository::MongoDB;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let mdb = MongoDB::new().await;
 
-    let entry = User {
-        id: Some(ObjectId::from_str("65b47748cd37932780900120").unwrap()),
-        username: "Jan".to_string(),
-        age: 25,
-        is_male: true
-    };
-
-    let result = mdb.create_document(&entry).await;
-    //let result = mdb.get_by_id::<User>("65b47748cd37932780900120").await;
-    println!("{:?}", result);
+    let coll_list = mdb.db.list_collection_names(doc! {}).await?;
+    println!("The list of MongoDB collections: {:?}", coll_list);
 
     Ok(())
 }
