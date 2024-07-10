@@ -2,11 +2,11 @@ use futures::TryStreamExt;
 use mongodb::{bson, Client, Database};
 use mongodb::bson::{doc, Document, oid::ObjectId};
 use mongodb::options::ClientOptions;
-use mongodb::results::UpdateResult;
+use mongodb::results::{DeleteResult, UpdateResult};
 use serde::{de::DeserializeOwned, Serialize};
 use std::str::FromStr;
 
-use crate::database::entities::DbEntity;
+use crate::database::db_entity::DbEntity;
 use crate::errors::{err, MyError};
 
 pub struct MongoDB {
@@ -95,25 +95,19 @@ impl MongoDB {
         }
     }
 
-    pub async fn _update_document_field(&self, collection: &str, id: &str, field: Document) 
-        -> Option<UpdateResult>
+    pub async fn delete_document<T: DbEntity>(&self, id: &ObjectId) 
+        -> Option<DeleteResult> where T: DbEntity + Serialize + Unpin + Send + Sync
     {
-        match ObjectId::from_str(id).map_err(err!()) {
-            Ok(object_id) => match self.db.collection::<Document>(collection)
-                .update_one(
-                    doc! {
-                        "_id": Some(object_id)
-                    },
-                    doc! {
-                        "$set": field
-                    }, 
-                    None
-                ).await.map_err(err!()) {
-                    Ok(result) => Some(result),
-                    Err(_) => None
+        match self.db.collection::<T>(&T::collection_name())
+            .delete_one(
+                doc! {
+                    "_id": Some(id)
                 },
-            Err(_) => None
-        }
+                None
+            ).await.map_err(err!()) {
+                Ok(result) => Some(result),
+                Err(_) => None
+            }
     }
 
     pub async fn _get_all<T: DbEntity>(&self, filter: Option<Document>)
