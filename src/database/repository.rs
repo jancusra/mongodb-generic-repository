@@ -6,7 +6,7 @@ use mongodb::results::UpdateResult;
 use serde::{de::DeserializeOwned, Serialize};
 use std::str::FromStr;
 
-use crate::entities::DbEntity;
+use crate::database::entities::DbEntity;
 use crate::errors::{err, MyError};
 
 pub struct MongoDB {
@@ -26,7 +26,7 @@ impl MongoDB {
         }
     }
 
-    pub async fn get_by_id<T: DbEntity>(&self, id: &str)
+    pub async fn _get_by_id<T: DbEntity>(&self, id: &str)
         -> Option<T> where T: DbEntity + DeserializeOwned + Unpin + Send + Sync
     {
         match ObjectId::from_str(id).map_err(err!()) {
@@ -45,7 +45,7 @@ impl MongoDB {
         }
     }
 
-    pub async fn get_one_by_filter<T: DbEntity>(&self, filter: Document)
+    pub async fn _get_one_by_filter<T: DbEntity>(&self, filter: Document)
         -> Option<T> where T: DbEntity + DeserializeOwned + Unpin + Send + Sync
     {
         match self.db.collection::<T>(&T::collection_name())
