@@ -61,8 +61,12 @@ async fn create_and_delete_database_document() {
 }
 
 #[tokio::test]
-async fn get_all_database_documents() {
+async fn create_and_get_all_database_documents() {
     let mdb = MongoDB::new().await;
+    let new_user_id = ObjectId::new();
+    let new_user = User::example2(&new_user_id);
+    
+    mdb.create_document(&new_user).await;
     
     let result_without_filter = mdb.get_all::<User>(None).await;
     let result_with_filter = mdb.get_all::<User>(Some(doc! { "is_male": true })).await;
