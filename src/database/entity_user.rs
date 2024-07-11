@@ -27,4 +27,13 @@ impl User {
             is_male: true
         }
     }
+
+    pub fn example2(id: &ObjectId) -> Self {
+        Self {
+            id: Some(id.clone()),
+            username: "Tereza".to_string(),
+            age: 30,
+            is_male: false
+        }
+    }
 }

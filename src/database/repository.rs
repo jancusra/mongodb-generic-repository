@@ -26,7 +26,7 @@ impl MongoDB {
         }
     }
 
-    pub async fn _get_by_id<T: DbEntity>(&self, id: &str)
+    pub async fn get_by_id<T: DbEntity>(&self, id: &str)
         -> Option<T> where T: DbEntity + DeserializeOwned + Unpin + Send + Sync
     {
         match ObjectId::from_str(id).map_err(err!()) {
@@ -45,19 +45,6 @@ impl MongoDB {
         }
     }
 
-    pub async fn _get_one_by_filter<T: DbEntity>(&self, filter: Document)
-        -> Option<T> where T: DbEntity + DeserializeOwned + Unpin + Send + Sync
-    {
-        match self.db.collection::<T>(&T::collection_name())
-            .find_one(
-                Some(filter),
-                None
-            ).await.map_err(err!()) {
-                Ok(entity) => entity,
-                Err(_) => None
-            }
-    }
-
     pub async fn create_document<T: DbEntity>(&self, entity: &T) 
         -> Option<ObjectId> where T: DbEntity + Serialize + Unpin + Send + Sync
     {
@@ -71,7 +58,7 @@ impl MongoDB {
             }
     }
 
-    pub async fn _update_document<T: DbEntity>(&self, id: &ObjectId, entity: &T) 
+    pub async fn update_document<T: DbEntity>(&self, id: &ObjectId, entity: &T) 
         -> Option<UpdateResult> where T: DbEntity + Serialize + Unpin + Send + Sync
     {
         match bson::to_bson(entity).map_err(err!()) {
@@ -110,7 +97,7 @@ impl MongoDB {
             }
     }
 
-    pub async fn _get_all<T: DbEntity>(&self, filter: Option<Document>)
+    pub async fn get_all<T: DbEntity>(&self, filter: Option<Document>)
         -> Vec<T> where T: DbEntity + DeserializeOwned + Unpin + Send + Sync 
     {
         let mut documents: Vec<T> = Vec::new();
