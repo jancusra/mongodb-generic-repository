@@ -9,6 +9,7 @@ impl DbEntity for Note {
     }
 }
 
+/// Database entity for storing notes
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct Note {
     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
@@ -17,6 +18,7 @@ pub struct Note {
     pub content: String
 }
 
+/// Example of note entity (used for testing)
 impl Note {
     pub fn example(id: &ObjectId) -> Self {
         Self {

@@ -9,6 +9,7 @@ impl DbEntity for User {
     }
 }
 
+/// Database entity for storing users
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct User {
     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
@@ -18,6 +19,7 @@ pub struct User {
     pub is_male: bool
 }
 
+/// Example of user entities (used for testing)
 impl User {
     pub fn example(id: &ObjectId) -> Self {
         Self {
