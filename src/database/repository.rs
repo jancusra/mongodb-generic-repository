@@ -9,11 +9,19 @@ use std::str::FromStr;
 use crate::database::db_entity::DbEntity;
 use crate::errors::{err, MyError};
 
+/// Custom MongoDB implementation
 pub struct MongoDB {
     pub db: Database
 }
 
 impl MongoDB {
+    /*/// Create new Mongo database connection
+    /// 
+    /// # Example
+    /// 
+    /// ```
+    /// let mdb = MongoDB::new().await;
+    /// ```*/
     pub async fn new() -> Self {
         match ClientOptions::parse("mongodb://localhost:27017/").await {
             Ok(client_options) => match Client::with_options(client_options) {
@@ -26,6 +34,14 @@ impl MongoDB {
         }
     }
 
+    /*/// Get database entity by ID
+    /// 
+    /// # Example
+    ///
+    /// ```
+    /// let user_id = "65b47748cd37932780900120".to_string();
+    /// let get_id_result = mdb.get_by_id::<User>(&user_id).await;
+    /// ```*/
     pub async fn get_by_id<T: DbEntity>(&self, id: &str)
         -> Option<T> where T: DbEntity + DeserializeOwned + Unpin + Send + Sync
     {
@@ -45,6 +61,13 @@ impl MongoDB {
         }
     }
 
+    /*/// Create database document
+    /// 
+    /// # Example
+    ///
+    /// ```
+    /// let create_result = mdb.create_document(&new_user).await;
+    /// ```*/
     pub async fn create_document<T: DbEntity>(&self, entity: &T) 
         -> Option<ObjectId> where T: DbEntity + Serialize + Unpin + Send + Sync
     {
@@ -58,6 +81,13 @@ impl MongoDB {
             }
     }
 
+    /*/// Update database document by entity ID
+    /// 
+    /// # Example
+    ///
+    /// ```
+    /// let update_result = mdb.update_document::<User>(&user_id, &user).await;
+    /// ```*/
     pub async fn update_document<T: DbEntity>(&self, id: &ObjectId, entity: &T) 
         -> Option<UpdateResult> where T: DbEntity + Serialize + Unpin + Send + Sync
     {

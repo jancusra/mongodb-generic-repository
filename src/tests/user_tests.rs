@@ -3,8 +3,8 @@ use mongodb::bson::{doc, oid::ObjectId};
 use more_asserts::assert_gt;
 use std::str::FromStr;
 
-use crate::database::entity_user::User;
-use crate::database::repository::MongoDB;
+use mongodb_repo::database::entity_user::User;
+use mongodb_repo::database::repository::MongoDB;
 
 #[tokio::test]
 async fn create_database_document() {

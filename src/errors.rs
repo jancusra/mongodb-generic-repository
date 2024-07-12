@@ -27,11 +27,16 @@ impl MyError {
 /// # Example
 /// 
 /// ```
-/// match ObjectId::from_str(id).map_err(err!()) {
-///     Ok(object_id) => Some(object_id),
-///     Err(_) => None
+/// use mongodb_repo::{err, errors::MyError};
+///
+/// let s: String = "42".to_string();
+/// 
+/// match s.parse::<i32>().map_err(err!()) {
+///     Ok(number) => assert_eq!(42, number),
+///     Err(_) => {}
 /// }
 /// ```
+#[macro_export]
 macro_rules! err {
     () => {
         |e| MyError::show(&e.to_string())

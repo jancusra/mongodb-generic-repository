@@ -2,8 +2,8 @@
 use mongodb::bson::{doc, oid::ObjectId};
 use std::str::FromStr;
 
-use crate::database::entity_note::Note;
-use crate::database::repository::MongoDB;
+use mongodb_repo::database::entity_note::Note;
+use mongodb_repo::database::repository::MongoDB;
 
 #[tokio::test]
 async fn create_and_get_document_by_id() {
