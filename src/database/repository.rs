@@ -148,6 +148,25 @@ impl MongoDB {
         }
     }
 
+    /// Delete database document by ID
+    /// 
+    /// # Example
+    /// 
+    /// ```
+    /// use mongodb::bson::oid::ObjectId;
+    /// use mongodb_repo::database::{entity_user::User, repository::MongoDB};
+    /// 
+    /// # tokio_test::block_on(async {
+    /// let mdb = MongoDB::new().await;
+    /// let new_user_id = ObjectId::new();
+    /// let new_user = User::example(&new_user_id);
+    /// 
+    /// let create_result = mdb.create_document(&new_user).await;
+    /// let delete_result = mdb.delete_document::<User>(&new_user_id).await;
+    /// 
+    /// assert_eq!((new_user_id, 1), (create_result.unwrap(), delete_result.unwrap().deleted_count));
+    /// # })
+    /// ```
     pub async fn delete_document<T: DbEntity>(&self, id: &ObjectId) 
         -> Option<DeleteResult> where T: DbEntity + Serialize + Unpin + Send + Sync
     {
@@ -163,6 +182,26 @@ impl MongoDB {
             }
     }
 
+    /// Retrieve all documents for a specific entity
+    /// 
+    /// # Example
+    /// 
+    /// ```
+    /// use mongodb::bson::{doc, oid::ObjectId};
+    /// use more_asserts::assert_gt;
+    /// use mongodb_repo::database::{entity_user::User, repository::MongoDB};
+    /// 
+    /// # tokio_test::block_on(async {
+    /// let mdb = MongoDB::new().await;
+    /// let new_user_id = ObjectId::new();
+    /// let new_user = User::example(&new_user_id);
+    /// 
+    /// mdb.create_document(&new_user).await;
+    /// let result_with_filter = mdb.get_all::<User>(Some(doc! { "is_male": true })).await;
+    /// 
+    /// assert_gt!(result_with_filter.len(), 0 as usize);
+    /// # })
+    /// ```
     pub async fn get_all<T: DbEntity>(&self, filter: Option<Document>)
         -> Vec<T> where T: DbEntity + DeserializeOwned + Unpin + Send + Sync 
     {

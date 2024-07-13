@@ -1,3 +1,5 @@
+//! Unit tests for database entity User
+
 #![allow(unused_imports)]
 use mongodb::bson::{doc, oid::ObjectId};
 use more_asserts::assert_gt;

@@ -1,3 +1,5 @@
+//! Unit tests for database entity Note
+
 #![allow(unused_imports)]
 use mongodb::bson::{doc, oid::ObjectId};
 use std::str::FromStr;
