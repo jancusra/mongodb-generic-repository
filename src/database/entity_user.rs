@@ -1,5 +1,6 @@
 use mongodb::bson::oid::ObjectId;
 use serde::{Serialize, Deserialize};
+use std::str::FromStr;
 
 use crate::database::db_entity::DbEntity;
 
@@ -21,6 +22,10 @@ pub struct User {
 
 /// Example of user entities (used for testing)
 impl User {
+    pub fn example_str_id(id: &str) -> Self {
+        User::example(&ObjectId::from_str(id).unwrap())
+    }
+    
     pub fn example(id: &ObjectId) -> Self {
         Self {
             id: Some(id.clone()),

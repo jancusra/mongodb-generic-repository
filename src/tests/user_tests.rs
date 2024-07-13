@@ -7,29 +7,33 @@ use mongodb_repo::database::entity_user::User;
 use mongodb_repo::database::repository::MongoDB;
 
 #[tokio::test]
+async fn get_or_create_document_by_id() {
+    let mdb = MongoDB::new().await;
+    let user_id = "65b47748cd37932780900120".to_string();
+    let new_user_id = ObjectId::from_str(&user_id).unwrap();
+    let mut user_result = mdb.get_by_id::<User>(&user_id).await;
+
+    if let Some(user) = user_result {
+        assert_eq!(User::example(&new_user_id), user);
+    }
+    else {
+        let new_user = User::example(&new_user_id);
+        let create_result = mdb.create_document(&new_user).await;
+        user_result = mdb.get_by_id::<User>(&user_id).await;
+
+        assert_eq!((new_user_id, User::example(&new_user_id)), (create_result.unwrap(), user_result.unwrap()));
+    }
+}
+
+#[tokio::test]
 async fn create_database_document() {
     let mdb = MongoDB::new().await;
     let new_user_id = ObjectId::new();
-    let new_user = User::example(&new_user_id);
+    let new_user = User::example2(&new_user_id);
 
     let result = mdb.create_document(&new_user).await;
 
     assert_eq!(new_user_id, result.unwrap());
-}
-
-#[tokio::test]
-async fn create_and_get_document_by_id() {
-    let mdb = MongoDB::new().await;
-    let user_id = "65b47748cd37932780900120".to_string();
-    let new_user_id = ObjectId::from_str(&user_id).unwrap();
-    let new_user = User::example2(&new_user_id);
-
-    let create_result = mdb.create_document(&new_user).await;
-    let get_id_result = mdb.get_by_id::<User>(&user_id).await;
-
-    assert_eq!((new_user_id, User::example2(&new_user_id)), (create_result.unwrap(), get_id_result.unwrap()));
-
-    mdb.delete_document::<User>(&new_user_id).await;
 }
 
 #[tokio::test]
@@ -64,7 +68,7 @@ async fn create_and_delete_database_document() {
 async fn create_and_get_all_database_documents() {
     let mdb = MongoDB::new().await;
     let new_user_id = ObjectId::new();
-    let new_user = User::example2(&new_user_id);
+    let new_user = User::example(&new_user_id);
     
     mdb.create_document(&new_user).await;
     

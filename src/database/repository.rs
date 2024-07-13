@@ -15,13 +15,18 @@ pub struct MongoDB {
 }
 
 impl MongoDB {
-    /*/// Create new Mongo database connection
+    /// Create new Mongo database connection
     /// 
     /// # Example
     /// 
     /// ```
+    /// use mongodb_repo::database::repository::MongoDB;
+    /// 
+    /// # tokio_test::block_on(async {
     /// let mdb = MongoDB::new().await;
-    /// ```*/
+    /// assert_eq!("test_repo", mdb.db.name());
+    /// # })
+    /// ```
     pub async fn new() -> Self {
         match ClientOptions::parse("mongodb://localhost:27017/").await {
             Ok(client_options) => match Client::with_options(client_options) {
@@ -34,14 +39,21 @@ impl MongoDB {
         }
     }
 
-    /*/// Get database entity by ID
+    /// Get database entity by ID
     /// 
     /// # Example
     ///
     /// ```
+    /// use mongodb_repo::database::{entity_user::User, repository::MongoDB};
+    /// 
+    /// # tokio_test::block_on(async {
+    /// let mdb = MongoDB::new().await;
     /// let user_id = "65b47748cd37932780900120".to_string();
-    /// let get_id_result = mdb.get_by_id::<User>(&user_id).await;
-    /// ```*/
+    /// let user_result = mdb.get_by_id::<User>(&user_id).await;
+    /// 
+    /// assert_eq!(User::example_str_id(&user_id), user_result.unwrap());
+    /// # })
+    /// ```
     pub async fn get_by_id<T: DbEntity>(&self, id: &str)
         -> Option<T> where T: DbEntity + DeserializeOwned + Unpin + Send + Sync
     {
@@ -61,13 +73,23 @@ impl MongoDB {
         }
     }
 
-    /*/// Create database document
+    /// Create database document
     /// 
     /// # Example
     ///
     /// ```
-    /// let create_result = mdb.create_document(&new_user).await;
-    /// ```*/
+    /// use mongodb::bson::oid::ObjectId;
+    /// use mongodb_repo::database::{entity_user::User, repository::MongoDB};
+    /// 
+    /// # tokio_test::block_on(async {
+    /// let mdb = MongoDB::new().await;
+    /// let new_user_id = ObjectId::new();
+    /// let new_user = User::example2(&new_user_id);
+    /// let result = mdb.create_document(&new_user).await;
+    ///
+    /// assert_eq!(new_user_id, result.unwrap());
+    /// # })
+    /// ```
     pub async fn create_document<T: DbEntity>(&self, entity: &T) 
         -> Option<ObjectId> where T: DbEntity + Serialize + Unpin + Send + Sync
     {
@@ -81,13 +103,27 @@ impl MongoDB {
             }
     }
 
-    /*/// Update database document by entity ID
+    /// Update database document by entity ID
     /// 
     /// # Example
     ///
     /// ```
-    /// let update_result = mdb.update_document::<User>(&user_id, &user).await;
-    /// ```*/
+    /// use mongodb::bson::oid::ObjectId;
+    /// use mongodb_repo::database::{entity_user::User, repository::MongoDB};
+    /// 
+    /// # tokio_test::block_on(async {
+    /// let mdb = MongoDB::new().await;
+    /// let new_user_id = ObjectId::new();
+    /// let mut new_user = User::example2(&new_user_id);
+    /// let create_result = mdb.create_document(&new_user).await;
+    /// 
+    /// new_user.username = "Nela - updated by test doc".to_string();
+    /// new_user.age = 42;
+    /// let update_result = mdb.update_document::<User>(&new_user_id, &new_user).await;
+    /// 
+    /// assert_eq!((new_user_id, 1), (create_result.unwrap(), update_result.unwrap().modified_count));
+    /// # })
+    /// ```
     pub async fn update_document<T: DbEntity>(&self, id: &ObjectId, entity: &T) 
         -> Option<UpdateResult> where T: DbEntity + Serialize + Unpin + Send + Sync
     {
