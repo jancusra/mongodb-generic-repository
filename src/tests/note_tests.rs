@@ -1,4 +1,4 @@
-//! Unit tests for database entity Note
+//! Integration tests for database entity Note
 
 #![allow(unused_imports)]
 use mongodb::bson::{doc, oid::ObjectId};
