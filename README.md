@@ -74,6 +74,11 @@ async fn main() -> Result<(), mongodb::error::Error> {
     let delete_result = mdb.delete_document::<User>(&user_id).await?;
     println!("deleted: {}", delete_result.deleted_count);
 
+    // READ by a string id (e.g. coming from a URL) — convert it to an ObjectId first
+    let id = ObjectId::parse_str("65b47748cd37932780900120")?;
+    let by_string_id = mdb.get_by_id::<User>(&id).await?;
+    println!("{by_string_id:?}");
+
     Ok(())
 }
 ```
@@ -100,8 +105,8 @@ let mdb = MongoDB::new_with_options(client_options, "my_app").await?;
 
 ```toml
 [dependencies]
-mongodb-repo = "0.8"
-mongodb = "3"
+mongodb-repo = "0.9"
+mongodb = "3.7"
 serde = { version = "1", features = ["derive"] }
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 ```
