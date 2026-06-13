@@ -10,7 +10,7 @@ use crate::test::entity::user::User;
 
 #[tokio::test]
 async fn get_or_create_document_by_id() {
-    let mdb = MongoDB::new().await.unwrap();
+    let mdb = MongoDB::new("test_repo").await.unwrap();
     let new_user_id = ObjectId::from_str("65b47748cd37932780900120").unwrap();
     let mut user_result = mdb.get_by_id::<User>(&new_user_id).await.unwrap();
 
@@ -33,7 +33,7 @@ async fn get_or_create_document_by_id() {
 
 #[tokio::test]
 async fn create_database_document() {
-    let mdb = MongoDB::new().await.unwrap();
+    let mdb = MongoDB::new("test_repo").await.unwrap();
     let new_user_id = ObjectId::new();
     let new_user = User::example2(&new_user_id);
 
@@ -44,7 +44,7 @@ async fn create_database_document() {
 
 #[tokio::test]
 async fn create_and_update_database_document() {
-    let mdb = MongoDB::new().await.unwrap();
+    let mdb = MongoDB::new("test_repo").await.unwrap();
     let new_user_id = ObjectId::new();
     let mut new_user = User::example2(&new_user_id);
 
@@ -69,7 +69,7 @@ async fn create_and_update_database_document() {
 
 #[tokio::test]
 async fn create_and_delete_database_document() {
-    let mdb = MongoDB::new().await.unwrap();
+    let mdb = MongoDB::new("test_repo").await.unwrap();
     let new_user_id = ObjectId::new();
     let new_user = User::example(&new_user_id);
 
@@ -87,7 +87,7 @@ async fn create_and_delete_database_document() {
 
 #[tokio::test]
 async fn create_and_get_all_database_documents() {
-    let mdb = MongoDB::new().await.unwrap();
+    let mdb = MongoDB::new("test_repo").await.unwrap();
     let new_user_id = ObjectId::new();
     let new_user = User::example(&new_user_id);
 

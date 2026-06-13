@@ -9,7 +9,7 @@ use crate::test::entity::note::Note;
 
 #[tokio::test]
 async fn create_database_document() {
-    let mdb = MongoDB::new().await.unwrap();
+    let mdb = MongoDB::new("test_repo").await.unwrap();
     let new_note_id = ObjectId::new();
     let new_note = Note::example(&new_note_id);
 
@@ -20,7 +20,7 @@ async fn create_database_document() {
 
 #[tokio::test]
 async fn create_and_update_database_document() {
-    let mdb = MongoDB::new().await.unwrap();
+    let mdb = MongoDB::new("test_repo").await.unwrap();
     let new_note_id = ObjectId::new();
     let mut new_note = Note::example(&new_note_id);
 
@@ -45,7 +45,7 @@ async fn create_and_update_database_document() {
 
 #[tokio::test]
 async fn create_and_delete_database_document() {
-    let mdb = MongoDB::new().await.unwrap();
+    let mdb = MongoDB::new("test_repo").await.unwrap();
     let new_note_id = ObjectId::new();
     let new_note = Note::example(&new_note_id);
 

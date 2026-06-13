@@ -22,16 +22,38 @@ impl MongoDB {
     /// use mongodb_repo::database::repository::MongoDB;
     ///
     /// # tokio_test::block_on(async {
-    /// let mdb = MongoDB::new().await.unwrap();
+    /// let mdb = MongoDB::new("test_repo").await.unwrap();
     /// assert_eq!("test_repo", mdb.db.name());
     /// # })
     /// ```
-    pub async fn new() -> Result<Self, Error> {
+    pub async fn new(database_name: &str) -> Result<Self, Error> {
         let client_options = ClientOptions::parse("mongodb://localhost:27017/").await?;
+
+        Self::new_with_options(client_options, database_name).await
+    }
+
+    /// Create new Mongo database connection from custom client options
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use mongodb::options::ClientOptions;
+    /// use mongodb_repo::database::repository::MongoDB;
+    ///
+    /// # tokio_test::block_on(async {
+    /// let client_options = ClientOptions::parse("mongodb://localhost:27017/").await.unwrap();
+    /// let mdb = MongoDB::new_with_options(client_options, "test_repo").await.unwrap();
+    /// assert_eq!("test_repo", mdb.db.name());
+    /// # })
+    /// ```
+    pub async fn new_with_options(
+        client_options: ClientOptions,
+        database_name: &str,
+    ) -> Result<Self, Error> {
         let client = Client::with_options(client_options)?;
 
         Ok(Self {
-            db: client.database("test_repo"),
+            db: client.database(database_name),
         })
     }
 
@@ -56,7 +78,7 @@ impl MongoDB {
     /// }
     ///
     /// # tokio_test::block_on(async {
-    /// let mdb = MongoDB::new().await.unwrap();
+    /// let mdb = MongoDB::new("test_repo").await.unwrap();
     /// let user_id = ObjectId::new();
     /// let user_result = mdb.get_by_id::<User>(&user_id).await.unwrap();
     ///
@@ -71,7 +93,7 @@ impl MongoDB {
     {
         self.db
             .collection::<T>(&T::collection_name())
-            .find_one(doc! { "_id": *id }, None)
+            .find_one(doc! { "_id": *id })
             .await
     }
 
@@ -96,7 +118,7 @@ impl MongoDB {
     /// }
     ///
     /// # tokio_test::block_on(async {
-    /// let mdb = MongoDB::new().await.unwrap();
+    /// let mdb = MongoDB::new("test_repo").await.unwrap();
     /// let new_user_id = ObjectId::new();
     /// let new_user = User { id: Some(new_user_id), username: "Tereza".to_string() };
     /// let result = mdb.create_document(&new_user).await.unwrap();
@@ -110,7 +132,7 @@ impl MongoDB {
     {
         self.db
             .collection::<T>(&T::collection_name())
-            .insert_one(entity, None)
+            .insert_one(entity)
             .await
     }
 
@@ -135,7 +157,7 @@ impl MongoDB {
     /// }
     ///
     /// # tokio_test::block_on(async {
-    /// let mdb = MongoDB::new().await.unwrap();
+    /// let mdb = MongoDB::new("test_repo").await.unwrap();
     /// let new_user_id = ObjectId::new();
     /// let mut new_user = User { id: Some(new_user_id), username: "Tereza".to_string() };
     /// mdb.create_document(&new_user).await.unwrap();
@@ -154,11 +176,11 @@ impl MongoDB {
     where
         T: DbEntity + Serialize + Unpin + Send + Sync,
     {
-        let document = bson::to_document(entity)?;
+        let document = bson::serialize_to_document(entity)?;
 
         self.db
             .collection::<T>(&T::collection_name())
-            .update_one(doc! { "_id": *id }, doc! { "$set": document }, None)
+            .update_one(doc! { "_id": *id }, doc! { "$set": document })
             .await
     }
 
@@ -183,7 +205,7 @@ impl MongoDB {
     /// }
     ///
     /// # tokio_test::block_on(async {
-    /// let mdb = MongoDB::new().await.unwrap();
+    /// let mdb = MongoDB::new("test_repo").await.unwrap();
     /// let new_user_id = ObjectId::new();
     /// let new_user = User { id: Some(new_user_id), username: "Jan".to_string() };
     ///
@@ -199,7 +221,7 @@ impl MongoDB {
     {
         self.db
             .collection::<T>(&T::collection_name())
-            .delete_one(doc! { "_id": *id }, None)
+            .delete_one(doc! { "_id": *id })
             .await
     }
 
@@ -225,7 +247,7 @@ impl MongoDB {
     /// }
     ///
     /// # tokio_test::block_on(async {
-    /// let mdb = MongoDB::new().await.unwrap();
+    /// let mdb = MongoDB::new("test_repo").await.unwrap();
     /// let new_user_id = ObjectId::new();
     /// let new_user = User { id: Some(new_user_id), username: "Jan".to_string() };
     ///
@@ -242,7 +264,7 @@ impl MongoDB {
         let cursor = self
             .db
             .collection::<T>(&T::collection_name())
-            .find(filter, None)
+            .find(filter.unwrap_or_default())
             .await?;
 
         let documents: Vec<T> = cursor.try_collect().await?;
