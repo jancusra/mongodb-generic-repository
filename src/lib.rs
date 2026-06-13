@@ -8,7 +8,6 @@
 //! run command "cargo doc --open" to open the documentation in a browser
 
 pub mod database;
-pub mod errors;
 
 #[cfg(test)]
 pub mod test;

@@ -1,13 +1,12 @@
 use futures::TryStreamExt;
 use mongodb::bson::{doc, oid::ObjectId, Document};
+use mongodb::error::Error;
 use mongodb::options::ClientOptions;
-use mongodb::results::{DeleteResult, UpdateResult};
+use mongodb::results::{DeleteResult, InsertOneResult, UpdateResult};
 use mongodb::{bson, Client, Database};
 use serde::{de::DeserializeOwned, Serialize};
-use std::str::FromStr;
 
 use crate::database::db_entity::DbEntity;
-use crate::errors::{err, MyError};
 
 /// Custom MongoDB implementation
 pub struct MongoDB {
@@ -23,22 +22,17 @@ impl MongoDB {
     /// use mongodb_repo::database::repository::MongoDB;
     ///
     /// # tokio_test::block_on(async {
-    /// let mdb = MongoDB::new().await;
+    /// let mdb = MongoDB::new().await.unwrap();
     /// assert_eq!("test_repo", mdb.db.name());
     /// # })
     /// ```
-    pub async fn new() -> Self {
-        match ClientOptions::parse("mongodb://localhost:27017/").await {
-            Ok(client_options) => match Client::with_options(client_options) {
-                Ok(client) => {
-                    return Self {
-                        db: client.database("test_repo"),
-                    }
-                }
-                Err(e) => panic!("{}", e.to_string()),
-            },
-            Err(e) => panic!("{}", e.to_string()),
-        }
+    pub async fn new() -> Result<Self, Error> {
+        let client_options = ClientOptions::parse("mongodb://localhost:27017/").await?;
+        let client = Client::with_options(client_options)?;
+
+        Ok(Self {
+            db: client.database("test_repo"),
+        })
     }
 
     /// Get database entity by ID
@@ -62,37 +56,23 @@ impl MongoDB {
     /// }
     ///
     /// # tokio_test::block_on(async {
-    /// let mdb = MongoDB::new().await;
-    /// let user_id = "65b47748cd37932780900120".to_string();
-    /// let user_result = mdb.get_by_id::<User>(&user_id).await;
+    /// let mdb = MongoDB::new().await.unwrap();
+    /// let user_id = ObjectId::new();
+    /// let user_result = mdb.get_by_id::<User>(&user_id).await.unwrap();
     ///
     /// if let Some(user) = user_result {
     ///     assert_eq!("Jan", user.username);
     /// }
     /// # })
     /// ```
-    pub async fn get_by_id<T: DbEntity>(&self, id: &str) -> Option<T>
+    pub async fn get_by_id<T: DbEntity>(&self, id: &ObjectId) -> Result<Option<T>, Error>
     where
         T: DbEntity + DeserializeOwned + Unpin + Send + Sync,
     {
-        match ObjectId::from_str(id).map_err(err!()) {
-            Ok(object_id) => match self
-                .db
-                .collection::<T>(&T::collection_name())
-                .find_one(
-                    doc! {
-                        "_id": Some(object_id)
-                    },
-                    None,
-                )
-                .await
-                .map_err(err!())
-            {
-                Ok(entity) => entity,
-                Err(_) => None,
-            },
-            Err(_) => None,
-        }
+        self.db
+            .collection::<T>(&T::collection_name())
+            .find_one(doc! { "_id": *id }, None)
+            .await
     }
 
     /// Create database document
@@ -116,28 +96,22 @@ impl MongoDB {
     /// }
     ///
     /// # tokio_test::block_on(async {
-    /// let mdb = MongoDB::new().await;
+    /// let mdb = MongoDB::new().await.unwrap();
     /// let new_user_id = ObjectId::new();
     /// let new_user = User { id: Some(new_user_id), username: "Tereza".to_string() };
-    /// let result = mdb.create_document(&new_user).await;
+    /// let result = mdb.create_document(&new_user).await.unwrap();
     ///
-    /// assert_eq!(new_user_id, result.unwrap());
+    /// assert_eq!(new_user_id, result.inserted_id.as_object_id().unwrap());
     /// # })
     /// ```
-    pub async fn create_document<T: DbEntity>(&self, entity: &T) -> Option<ObjectId>
+    pub async fn create_document<T: DbEntity>(&self, entity: &T) -> Result<InsertOneResult, Error>
     where
         T: DbEntity + Serialize + Unpin + Send + Sync,
     {
-        match self
-            .db
+        self.db
             .collection::<T>(&T::collection_name())
             .insert_one(entity, None)
             .await
-            .map_err(err!())
-        {
-            Ok(result) => result.inserted_id.as_object_id(),
-            Err(_) => None,
-        }
     }
 
     /// Update database document by entity ID
@@ -161,49 +135,35 @@ impl MongoDB {
     /// }
     ///
     /// # tokio_test::block_on(async {
-    /// let mdb = MongoDB::new().await;
+    /// let mdb = MongoDB::new().await.unwrap();
     /// let new_user_id = ObjectId::new();
     /// let mut new_user = User { id: Some(new_user_id), username: "Tereza".to_string() };
-    /// let create_result = mdb.create_document(&new_user).await;
+    /// mdb.create_document(&new_user).await.unwrap();
     ///
     /// new_user.username = "Nela - updated by test doc".to_string();
-    /// let update_result = mdb.update_document::<User>(&new_user_id, &new_user).await;
+    /// let update_result = mdb.update_document::<User>(&new_user_id, &new_user).await.unwrap();
     ///
-    /// assert_eq!((new_user_id, 1), (create_result.unwrap(), update_result.unwrap().modified_count));
+    /// assert_eq!(1, update_result.modified_count);
     /// # })
     /// ```
     pub async fn update_document<T: DbEntity>(
         &self,
         id: &ObjectId,
         entity: &T,
-    ) -> Option<UpdateResult>
+    ) -> Result<UpdateResult, Error>
     where
         T: DbEntity + Serialize + Unpin + Send + Sync,
     {
-        match bson::to_bson(entity).map_err(err!()) {
-            Ok(serialized_data) => match serialized_data.as_document() {
-                Some(document) => match self
-                    .db
-                    .collection::<T>(&T::collection_name())
-                    .update_one(
-                        doc! {
-                            "_id": Some(id)
-                        },
-                        doc! {
-                            "$set": document
-                        },
-                        None,
-                    )
-                    .await
-                    .map_err(err!())
-                {
-                    Ok(result) => Some(result),
-                    Err(_) => None,
-                },
-                None => None,
-            },
-            Err(_) => None,
-        }
+        let document = bson::to_document(entity)?;
+
+        self.db
+            .collection::<T>(&T::collection_name())
+            .update_one(
+                doc! { "_id": *id },
+                doc! { "$set": document },
+                None,
+            )
+            .await
     }
 
     /// Delete database document by ID
@@ -227,35 +187,24 @@ impl MongoDB {
     /// }
     ///
     /// # tokio_test::block_on(async {
-    /// let mdb = MongoDB::new().await;
+    /// let mdb = MongoDB::new().await.unwrap();
     /// let new_user_id = ObjectId::new();
     /// let new_user = User { id: Some(new_user_id), username: "Jan".to_string() };
     ///
-    /// let create_result = mdb.create_document(&new_user).await;
-    /// let delete_result = mdb.delete_document::<User>(&new_user_id).await;
+    /// mdb.create_document(&new_user).await.unwrap();
+    /// let delete_result = mdb.delete_document::<User>(&new_user_id).await.unwrap();
     ///
-    /// assert_eq!((new_user_id, 1), (create_result.unwrap(), delete_result.unwrap().deleted_count));
+    /// assert_eq!(1, delete_result.deleted_count);
     /// # })
     /// ```
-    pub async fn delete_document<T: DbEntity>(&self, id: &ObjectId) -> Option<DeleteResult>
+    pub async fn delete_document<T: DbEntity>(&self, id: &ObjectId) -> Result<DeleteResult, Error>
     where
         T: DbEntity + Serialize + Unpin + Send + Sync,
     {
-        match self
-            .db
+        self.db
             .collection::<T>(&T::collection_name())
-            .delete_one(
-                doc! {
-                    "_id": Some(id)
-                },
-                None,
-            )
+            .delete_one(doc! { "_id": *id }, None)
             .await
-            .map_err(err!())
-        {
-            Ok(result) => Some(result),
-            Err(_) => None,
-        }
     }
 
     /// Retrieve all documents for a specific entity
@@ -280,36 +229,28 @@ impl MongoDB {
     /// }
     ///
     /// # tokio_test::block_on(async {
-    /// let mdb = MongoDB::new().await;
+    /// let mdb = MongoDB::new().await.unwrap();
     /// let new_user_id = ObjectId::new();
     /// let new_user = User { id: Some(new_user_id), username: "Jan".to_string() };
     ///
-    /// mdb.create_document(&new_user).await;
-    /// let result_with_filter = mdb.get_all::<User>(Some(doc! { "username": "Jan" })).await;
+    /// mdb.create_document(&new_user).await.unwrap();
+    /// let result_with_filter = mdb.get_all::<User>(Some(doc! { "username": "Jan" })).await.unwrap();
     ///
     /// assert_gt!(result_with_filter.len(), 0 as usize);
     /// # })
     /// ```
-    pub async fn get_all<T: DbEntity>(&self, filter: Option<Document>) -> Vec<T>
+    pub async fn get_all<T: DbEntity>(&self, filter: Option<Document>) -> Result<Vec<T>, Error>
     where
         T: DbEntity + DeserializeOwned + Unpin + Send + Sync,
     {
-        let mut documents: Vec<T> = Vec::new();
-        let mut cursor = match self
+        let cursor = self
             .db
             .collection::<T>(&T::collection_name())
             .find(filter, None)
-            .await
-            .map_err(err!())
-        {
-            Ok(cursor) => cursor,
-            Err(_) => return vec![],
-        };
+            .await?;
 
-        while let Ok(Some(doc)) = cursor.try_next().await {
-            documents.push(doc);
-        }
+        let documents: Vec<T> = cursor.try_collect().await?;
 
-        documents
+        Ok(documents)
     }
 }
