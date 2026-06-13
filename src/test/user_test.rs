@@ -5,8 +5,8 @@ use mongodb::bson::{doc, oid::ObjectId};
 use more_asserts::assert_gt;
 use std::str::FromStr;
 
-use mongodb_repo::database::entity_user::User;
-use mongodb_repo::database::repository::MongoDB;
+use crate::database::repository::MongoDB;
+use crate::test::entity::user::User;
 
 #[tokio::test]
 async fn get_or_create_document_by_id() {
@@ -17,13 +17,15 @@ async fn get_or_create_document_by_id() {
 
     if let Some(user) = user_result {
         assert_eq!(User::example(&new_user_id), user);
-    }
-    else {
+    } else {
         let new_user = User::example(&new_user_id);
         let create_result = mdb.create_document(&new_user).await;
         user_result = mdb.get_by_id::<User>(&user_id).await;
 
-        assert_eq!((new_user_id, User::example(&new_user_id)), (create_result.unwrap(), user_result.unwrap()));
+        assert_eq!(
+            (new_user_id, User::example(&new_user_id)),
+            (create_result.unwrap(), user_result.unwrap())
+        );
     }
 }
 
@@ -51,7 +53,13 @@ async fn create_and_update_database_document() {
 
     let update_result = mdb.update_document::<User>(&new_user_id, &new_user).await;
 
-    assert_eq!((new_user_id, 1), (create_result.unwrap(), update_result.unwrap().modified_count));
+    assert_eq!(
+        (new_user_id, 1),
+        (
+            create_result.unwrap(),
+            update_result.unwrap().modified_count
+        )
+    );
 }
 
 #[tokio::test]
@@ -63,7 +71,10 @@ async fn create_and_delete_database_document() {
     let create_result = mdb.create_document(&new_user).await;
     let delete_result = mdb.delete_document::<User>(&new_user_id).await;
 
-    assert_eq!((new_user_id, 1), (create_result.unwrap(), delete_result.unwrap().deleted_count));
+    assert_eq!(
+        (new_user_id, 1),
+        (create_result.unwrap(), delete_result.unwrap().deleted_count)
+    );
 }
 
 #[tokio::test]
@@ -71,11 +82,14 @@ async fn create_and_get_all_database_documents() {
     let mdb = MongoDB::new().await;
     let new_user_id = ObjectId::new();
     let new_user = User::example(&new_user_id);
-    
+
     mdb.create_document(&new_user).await;
-    
+
     let result_without_filter = mdb.get_all::<User>(None).await;
     let result_with_filter = mdb.get_all::<User>(Some(doc! { "is_male": true })).await;
 
-    assert_gt!((result_without_filter.len(), result_with_filter.len()), (0 as usize, 0 as usize));
+    assert_gt!(
+        (result_without_filter.len(), result_with_filter.len()),
+        (0 as usize, 0 as usize)
+    );
 }

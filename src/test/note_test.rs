@@ -4,8 +4,8 @@
 use mongodb::bson::{doc, oid::ObjectId};
 use std::str::FromStr;
 
-use mongodb_repo::database::entity_note::Note;
-use mongodb_repo::database::repository::MongoDB;
+use crate::database::repository::MongoDB;
+use crate::test::entity::note::Note;
 
 #[tokio::test]
 async fn create_database_document() {
@@ -31,7 +31,13 @@ async fn create_and_update_database_document() {
 
     let update_result = mdb.update_document::<Note>(&new_note_id, &new_note).await;
 
-    assert_eq!((new_note_id, 1), (create_result.unwrap(), update_result.unwrap().modified_count));
+    assert_eq!(
+        (new_note_id, 1),
+        (
+            create_result.unwrap(),
+            update_result.unwrap().modified_count
+        )
+    );
 }
 
 #[tokio::test]
@@ -43,5 +49,8 @@ async fn create_and_delete_database_document() {
     let create_result = mdb.create_document(&new_note).await;
     let delete_result = mdb.delete_document::<Note>(&new_note_id).await;
 
-    assert_eq!((new_note_id, 1), (create_result.unwrap(), delete_result.unwrap().deleted_count));
+    assert_eq!(
+        (new_note_id, 1),
+        (create_result.unwrap(), delete_result.unwrap().deleted_count)
+    );
 }
