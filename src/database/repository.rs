@@ -1,14 +1,13 @@
+use crate::database::db_entity::DbEntity;
 use futures::TryStreamExt;
 use mongodb::bson::{doc, oid::ObjectId, Document};
 use mongodb::error::Error;
-use mongodb::options::ClientOptions;
+use mongodb::options::{ClientOptions, FindOptions};
 use mongodb::results::{DeleteResult, InsertOneResult, UpdateResult};
 use mongodb::{bson, Client, Database};
-use serde::{de::DeserializeOwned, Serialize};
-
-use crate::database::db_entity::DbEntity;
 
 /// Custom MongoDB implementation
+#[derive(Clone, Debug)]
 pub struct MongoDB {
     pub db: Database,
 }
@@ -74,7 +73,7 @@ impl MongoDB {
     /// }
     ///
     /// impl DbEntity for User {
-    ///     fn collection_name() -> String { "Users".to_string() }
+    ///     fn collection_name() -> &'static str { "Users" }
     /// }
     ///
     /// # tokio_test::block_on(async {
@@ -87,12 +86,9 @@ impl MongoDB {
     /// }
     /// # })
     /// ```
-    pub async fn get_by_id<T: DbEntity>(&self, id: &ObjectId) -> Result<Option<T>, Error>
-    where
-        T: DbEntity + DeserializeOwned + Unpin + Send + Sync,
-    {
+    pub async fn get_by_id<T: DbEntity>(&self, id: &ObjectId) -> Result<Option<T>, Error> {
         self.db
-            .collection::<T>(&T::collection_name())
+            .collection::<T>(T::collection_name())
             .find_one(doc! { "_id": *id })
             .await
     }
@@ -114,7 +110,7 @@ impl MongoDB {
     /// }
     ///
     /// impl DbEntity for User {
-    ///     fn collection_name() -> String { "Users".to_string() }
+    ///     fn collection_name() -> &'static str { "Users" }
     /// }
     ///
     /// # tokio_test::block_on(async {
@@ -126,12 +122,9 @@ impl MongoDB {
     /// assert_eq!(new_user_id, result.inserted_id.as_object_id().unwrap());
     /// # })
     /// ```
-    pub async fn create_document<T: DbEntity>(&self, entity: &T) -> Result<InsertOneResult, Error>
-    where
-        T: DbEntity + Serialize + Unpin + Send + Sync,
-    {
+    pub async fn create_document<T: DbEntity>(&self, entity: &T) -> Result<InsertOneResult, Error> {
         self.db
-            .collection::<T>(&T::collection_name())
+            .collection::<T>(T::collection_name())
             .insert_one(entity)
             .await
     }
@@ -153,7 +146,7 @@ impl MongoDB {
     /// }
     ///
     /// impl DbEntity for User {
-    ///     fn collection_name() -> String { "Users".to_string() }
+    ///     fn collection_name() -> &'static str { "Users" }
     /// }
     ///
     /// # tokio_test::block_on(async {
@@ -172,14 +165,15 @@ impl MongoDB {
         &self,
         id: &ObjectId,
         entity: &T,
-    ) -> Result<UpdateResult, Error>
-    where
-        T: DbEntity + Serialize + Unpin + Send + Sync,
-    {
-        let document = bson::serialize_to_document(entity)?;
+    ) -> Result<UpdateResult, Error> {
+        let mut document = bson::serialize_to_document(entity)?;
+
+        // The "_id" field is immutable in MongoDB and is already used as the
+        // filter, so it must not be part of the "$set" update document.
+        document.remove("_id");
 
         self.db
-            .collection::<T>(&T::collection_name())
+            .collection::<T>(T::collection_name())
             .update_one(doc! { "_id": *id }, doc! { "$set": document })
             .await
     }
@@ -201,7 +195,7 @@ impl MongoDB {
     /// }
     ///
     /// impl DbEntity for User {
-    ///     fn collection_name() -> String { "Users".to_string() }
+    ///     fn collection_name() -> &'static str { "Users" }
     /// }
     ///
     /// # tokio_test::block_on(async {
@@ -215,17 +209,53 @@ impl MongoDB {
     /// assert_eq!(1, delete_result.deleted_count);
     /// # })
     /// ```
-    pub async fn delete_document<T: DbEntity>(&self, id: &ObjectId) -> Result<DeleteResult, Error>
-    where
-        T: DbEntity + Serialize + Unpin + Send + Sync,
-    {
+    pub async fn delete_document<T: DbEntity>(&self, id: &ObjectId) -> Result<DeleteResult, Error> {
         self.db
-            .collection::<T>(&T::collection_name())
+            .collection::<T>(T::collection_name())
             .delete_one(doc! { "_id": *id })
             .await
     }
 
-    /// Retrieve all documents for a specific entity
+    /// Retrieve all documents for a specific entity.
+    ///
+    /// For filtering, pagination or sorting use
+    /// [`get_all_with_options`](Self::get_all_with_options).
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use mongodb::bson::oid::ObjectId;
+    /// use more_asserts::assert_gt;
+    /// use serde::{Serialize, Deserialize};
+    /// use mongodb_repo::database::{db_entity::DbEntity, repository::MongoDB};
+    ///
+    /// #[derive(Serialize, Deserialize)]
+    /// struct User {
+    ///     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
+    ///     id: Option<ObjectId>,
+    ///     username: String,
+    /// }
+    ///
+    /// impl DbEntity for User {
+    ///     fn collection_name() -> &'static str { "Users" }
+    /// }
+    ///
+    /// # tokio_test::block_on(async {
+    /// let mdb = MongoDB::new("test_repo").await.unwrap();
+    /// let new_user = User { id: Some(ObjectId::new()), username: "Jan".to_string() };
+    ///
+    /// mdb.create_document(&new_user).await.unwrap();
+    /// let all_users = mdb.get_all::<User>().await.unwrap();
+    ///
+    /// assert_gt!(all_users.len(), 0usize);
+    /// # })
+    /// ```
+    pub async fn get_all<T: DbEntity>(&self) -> Result<Vec<T>, Error> {
+        self.get_all_with_options::<T>(None, None, None, None).await
+    }
+
+    /// Retrieve documents for a specific entity, with an optional filter,
+    /// pagination (`limit`, `skip`) and `sort`.
     ///
     /// # Example
     ///
@@ -243,28 +273,48 @@ impl MongoDB {
     /// }
     ///
     /// impl DbEntity for User {
-    ///     fn collection_name() -> String { "Users".to_string() }
+    ///     fn collection_name() -> &'static str { "Users" }
     /// }
     ///
     /// # tokio_test::block_on(async {
     /// let mdb = MongoDB::new("test_repo").await.unwrap();
-    /// let new_user_id = ObjectId::new();
-    /// let new_user = User { id: Some(new_user_id), username: "Jan".to_string() };
+    /// let new_user = User { id: Some(ObjectId::new()), username: "Jan".to_string() };
     ///
     /// mdb.create_document(&new_user).await.unwrap();
-    /// let result_with_filter = mdb.get_all::<User>(Some(doc! { "username": "Jan" })).await.unwrap();
     ///
-    /// assert_gt!(result_with_filter.len(), 0 as usize);
+    /// // all matching documents
+    /// let result_with_filter = mdb
+    ///     .get_all_with_options::<User>(Some(doc! { "username": "Jan" }), None, None, None)
+    ///     .await
+    ///     .unwrap();
+    ///
+    /// // first 10 documents, sorted by username ascending
+    /// let first_page = mdb
+    ///     .get_all_with_options::<User>(None, Some(10), None, Some(doc! { "username": 1 }))
+    ///     .await
+    ///     .unwrap();
+    ///
+    /// assert_gt!(result_with_filter.len(), 0usize);
     /// # })
     /// ```
-    pub async fn get_all<T: DbEntity>(&self, filter: Option<Document>) -> Result<Vec<T>, Error>
-    where
-        T: DbEntity + DeserializeOwned + Unpin + Send + Sync,
-    {
+    pub async fn get_all_with_options<T: DbEntity>(
+        &self,
+        filter: Option<Document>,
+        limit: Option<i64>,
+        skip: Option<u64>,
+        sort: Option<Document>,
+    ) -> Result<Vec<T>, Error> {
+        let options = FindOptions::builder()
+            .limit(limit)
+            .skip(skip)
+            .sort(sort)
+            .build();
+
         let cursor = self
             .db
-            .collection::<T>(&T::collection_name())
+            .collection::<T>(T::collection_name())
             .find(filter.unwrap_or_default())
+            .with_options(options)
             .await?;
 
         let documents: Vec<T> = cursor.try_collect().await?;

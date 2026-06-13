@@ -1,6 +1,6 @@
-use serde::de::DeserializeOwned;
+use serde::{de::DeserializeOwned, Serialize};
 
 /// Common database entity trait for defining the entity table name
-pub trait DbEntity: DeserializeOwned + Sync + Send + Unpin {
-    fn collection_name() -> String;
+pub trait DbEntity: Serialize + DeserializeOwned + Send + Sync + Unpin {
+    fn collection_name() -> &'static str;
 }

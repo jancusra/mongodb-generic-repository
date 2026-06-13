@@ -5,46 +5,49 @@ use mongodb::bson::{doc, oid::ObjectId};
 use more_asserts::assert_gt;
 use std::str::FromStr;
 
-use crate::database::repository::MongoDB;
+use crate::test::common::{drop_db, test_db};
 use crate::test::entity::user::User;
 
 #[tokio::test]
 async fn get_or_create_document_by_id() {
-    let mdb = MongoDB::new("test_repo").await.unwrap();
+    let mdb = test_db().await;
     let new_user_id = ObjectId::from_str("65b47748cd37932780900120").unwrap();
-    let mut user_result = mdb.get_by_id::<User>(&new_user_id).await.unwrap();
 
-    if let Some(user) = user_result {
-        assert_eq!(User::example(&new_user_id), user);
-    } else {
-        let new_user = User::example(&new_user_id);
-        let create_result = mdb.create_document(&new_user).await.unwrap();
-        user_result = mdb.get_by_id::<User>(&new_user_id).await.unwrap();
+    // fresh isolated database -> the document never exists yet
+    let existing = mdb.get_by_id::<User>(&new_user_id).await.unwrap();
 
-        assert_eq!(
-            (new_user_id, Some(User::example(&new_user_id))),
-            (
-                create_result.inserted_id.as_object_id().unwrap(),
-                user_result
-            )
-        );
-    }
+    let new_user = User::example(&new_user_id);
+    let create_result = mdb.create_document(&new_user).await.unwrap();
+    let user_result = mdb.get_by_id::<User>(&new_user_id).await.unwrap();
+
+    drop_db(&mdb).await;
+
+    assert_eq!(None, existing);
+    assert_eq!(
+        (new_user_id, Some(User::example(&new_user_id))),
+        (
+            create_result.inserted_id.as_object_id().unwrap(),
+            user_result
+        )
+    );
 }
 
 #[tokio::test]
 async fn create_database_document() {
-    let mdb = MongoDB::new("test_repo").await.unwrap();
+    let mdb = test_db().await;
     let new_user_id = ObjectId::new();
     let new_user = User::example2(&new_user_id);
 
     let result = mdb.create_document(&new_user).await.unwrap();
+
+    drop_db(&mdb).await;
 
     assert_eq!(new_user_id, result.inserted_id.as_object_id().unwrap());
 }
 
 #[tokio::test]
 async fn create_and_update_database_document() {
-    let mdb = MongoDB::new("test_repo").await.unwrap();
+    let mdb = test_db().await;
     let new_user_id = ObjectId::new();
     let mut new_user = User::example2(&new_user_id);
 
@@ -58,6 +61,8 @@ async fn create_and_update_database_document() {
         .await
         .unwrap();
 
+    drop_db(&mdb).await;
+
     assert_eq!(
         (new_user_id, 1),
         (
@@ -69,12 +74,14 @@ async fn create_and_update_database_document() {
 
 #[tokio::test]
 async fn create_and_delete_database_document() {
-    let mdb = MongoDB::new("test_repo").await.unwrap();
+    let mdb = test_db().await;
     let new_user_id = ObjectId::new();
     let new_user = User::example(&new_user_id);
 
     let create_result = mdb.create_document(&new_user).await.unwrap();
     let delete_result = mdb.delete_document::<User>(&new_user_id).await.unwrap();
+
+    drop_db(&mdb).await;
 
     assert_eq!(
         (new_user_id, 1),
@@ -87,20 +94,22 @@ async fn create_and_delete_database_document() {
 
 #[tokio::test]
 async fn create_and_get_all_database_documents() {
-    let mdb = MongoDB::new("test_repo").await.unwrap();
+    let mdb = test_db().await;
     let new_user_id = ObjectId::new();
     let new_user = User::example(&new_user_id);
 
     mdb.create_document(&new_user).await.unwrap();
 
-    let result_without_filter = mdb.get_all::<User>(None).await.unwrap();
+    let result_without_filter = mdb.get_all::<User>().await.unwrap();
     let result_with_filter = mdb
-        .get_all::<User>(Some(doc! { "is_male": true }))
+        .get_all_with_options::<User>(Some(doc! { "is_male": true }), None, None, None)
         .await
         .unwrap();
 
+    drop_db(&mdb).await;
+
     assert_gt!(
         (result_without_filter.len(), result_with_filter.len()),
-        (0 as usize, 0 as usize)
+        (0usize, 0usize)
     );
 }

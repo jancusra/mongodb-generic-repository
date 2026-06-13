@@ -5,8 +5,8 @@ use std::str::FromStr;
 use crate::database::db_entity::DbEntity;
 
 impl DbEntity for User {
-    fn collection_name() -> String {
-        String::from("Users")
+    fn collection_name() -> &'static str {
+        "Users"
     }
 }
 
@@ -28,7 +28,7 @@ impl User {
 
     pub fn example(id: &ObjectId) -> Self {
         Self {
-            id: Some(id.clone()),
+            id: Some(*id),
             username: "Jan".to_string(),
             age: 25,
             is_male: true,
@@ -37,7 +37,7 @@ impl User {
 
     pub fn example2(id: &ObjectId) -> Self {
         Self {
-            id: Some(id.clone()),
+            id: Some(*id),
             username: "Tereza".to_string(),
             age: 30,
             is_male: false,
