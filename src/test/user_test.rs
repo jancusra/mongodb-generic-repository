@@ -23,7 +23,10 @@ async fn get_or_create_document_by_id() {
 
         assert_eq!(
             (new_user_id, Some(User::example(&new_user_id))),
-            (create_result.inserted_id.as_object_id().unwrap(), user_result)
+            (
+                create_result.inserted_id.as_object_id().unwrap(),
+                user_result
+            )
         );
     }
 }
@@ -50,7 +53,10 @@ async fn create_and_update_database_document() {
     new_user.username = "Maria".to_string();
     new_user.age = 54;
 
-    let update_result = mdb.update_document::<User>(&new_user_id, &new_user).await.unwrap();
+    let update_result = mdb
+        .update_document::<User>(&new_user_id, &new_user)
+        .await
+        .unwrap();
 
     assert_eq!(
         (new_user_id, 1),
@@ -88,7 +94,10 @@ async fn create_and_get_all_database_documents() {
     mdb.create_document(&new_user).await.unwrap();
 
     let result_without_filter = mdb.get_all::<User>(None).await.unwrap();
-    let result_with_filter = mdb.get_all::<User>(Some(doc! { "is_male": true })).await.unwrap();
+    let result_with_filter = mdb
+        .get_all::<User>(Some(doc! { "is_male": true }))
+        .await
+        .unwrap();
 
     assert_gt!(
         (result_without_filter.len(), result_with_filter.len()),

@@ -158,11 +158,7 @@ impl MongoDB {
 
         self.db
             .collection::<T>(&T::collection_name())
-            .update_one(
-                doc! { "_id": *id },
-                doc! { "$set": document },
-                None,
-            )
+            .update_one(doc! { "_id": *id }, doc! { "$set": document }, None)
             .await
     }
 

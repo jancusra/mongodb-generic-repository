@@ -1,5 +1,5 @@
 use mongodb::bson::oid::ObjectId;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
 use crate::database::db_entity::DbEntity;
@@ -17,7 +17,7 @@ pub struct User {
     pub id: Option<ObjectId>,
     pub username: String,
     pub age: u32,
-    pub is_male: bool
+    pub is_male: bool,
 }
 
 /// Example of user entities (used for testing)
@@ -25,13 +25,13 @@ impl User {
     pub fn example_str_id(id: &str) -> Self {
         User::example(&ObjectId::from_str(id).unwrap())
     }
-    
+
     pub fn example(id: &ObjectId) -> Self {
         Self {
             id: Some(id.clone()),
             username: "Jan".to_string(),
             age: 25,
-            is_male: true
+            is_male: true,
         }
     }
 
@@ -40,7 +40,7 @@ impl User {
             id: Some(id.clone()),
             username: "Tereza".to_string(),
             age: 30,
-            is_male: false
+            is_male: false,
         }
     }
 }
