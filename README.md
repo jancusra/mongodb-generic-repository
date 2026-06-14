@@ -1,5 +1,12 @@
 # MongoDB generic repository in Rust
 
+[![crates.io](https://img.shields.io/crates/v/mongodb-repo.svg)](https://crates.io/crates/mongodb-repo)
+[![docs](https://docs.rs/mongodb-repo/badge.svg)](https://docs.rs/mongodb-repo)
+[![all tests](https://github.com/jancusra/mongodb-generic-repository/actions/workflows/rust.yml/badge.svg)](https://github.com/jancusra/mongodb-generic-repository/actions/workflows/rust.yml)
+[![crate downloads](https://img.shields.io/crates/d/mongodb-repo.svg?label=crate%20downloads)](https://crates.io/crates/mongodb-repo)
+[![user downloads](https://img.shields.io/crates/udt/423982.svg?label=user%20downloads)](https://crates.io/users/jancusra)
+[![license](https://img.shields.io/crates/l/mongodb-repo.svg)](https://crates.io/crates/mongodb-repo)
+
 A small, generic repository layer on top of the official [`mongodb`](https://crates.io/crates/mongodb)
 driver. Implement a single trait on your entity and you get async CRUD operations
 (Create / Read / Update / Delete / Get all) for free — no boilerplate repository per entity.
