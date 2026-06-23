@@ -20,7 +20,7 @@ pub struct User {
     pub is_male: bool,
 }
 
-/// Example of user entities (used for testing)
+/// Examples of user entities (used for testing)
 impl User {
     pub fn example_str_id(id: &str) -> Self {
         User::example(&ObjectId::from_str(id).unwrap())

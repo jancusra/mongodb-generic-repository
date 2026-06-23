@@ -19,7 +19,7 @@ jobs:
       - name: Start MongoDB
         uses: supercharge/mongodb-github-action@1.12.1
         with:
-          mongodb-version: 'latest'
+          mongodb-version: '8.0'
 
       - name: Run cargo test
         run: cargo test --all-targets
